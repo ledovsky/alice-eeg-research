@@ -27,8 +27,15 @@ class IC:
         powers, freqs = mne.time_frequency.psd_multitaper(epochs, picks=[0], **kwargs)
         return freqs, powers.mean(axis=1)
 
-    def plot_psd():
-        raise NotImplementedError
+    def plot_psd(self, returns=False):
+        fig = plt.figure()
+
+        freqs, powers = self.psd(verbose=False)
+        plt.fill_between(freqs, powers.mean(axis=0) - powers.std(axis=0), powers.mean(axis=0) + powers.std(axis=0), alpha=0.2)
+        plt.semilogy(freqs, powers.mean(axis=0))
+
+        if returns:
+            return fig
 
     def plot_topomap(self, returns=False):
         fig, ax = plt.subplots()
@@ -74,6 +81,7 @@ class IC:
 
         if returns:
             return fig
+
 
 def read_ic(dir, ic_id, freqs=None):
     path = Path(dir)

@@ -114,6 +114,18 @@ default_features = {'K': compute_K,
 
 
 def build_feature_df(data, default=True, custom_features={}):
+    """
+    Computes the feature matrix for the dataset of components.
+
+    Args:
+        data (dataset): A mapping of {ic_id: IC}. Compatible with the dataset representaion produced by load_dataset().
+        default (bool, optional): Determines wether to compute a standard selection of features for the dataset. Defaults to True.
+        custom_features (dict, optional): A mapping of custom features that will be computed for the dataset.
+        The format is {feature_name: compute_feature} where compute_feature is a function with the only argument IC. Defaults to {}.
+
+    Returns:
+        pd.Dataframe: The feature matrix for the dataset.
+    """
     feature_df = pd.DataFrame(index=data.keys())
     if default:
         for feature_name, compute_feature in default_features.items():
