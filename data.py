@@ -142,3 +142,162 @@ def build_target_df(annotations, flags=None, threshold=0.5) -> pd.DataFrame:
         targets[flag] = get_target(annotations, flag, threshold)
 
     return targets
+
+
+
+
+def get_target_temp(annotations, flag, agg_type='all_ones') -> pd.DataFrame:
+    
+    """
+    Args:
+        annotations (pd.DataFrame): dataframe containing targets.
+        
+        
+        flags (dict, list, optional): either list of flag names for which to construct labels or a mapping {flag_name: threshold}. Then it will select each component with its own threshold value.
+        If set to None, all flags in annotaions will be selected.
+        
+        
+        agg_type (string): the principle of experts marks aggregation
+            all_ones: equal union of all experts marks
+            intercept_ones: only overlap of marks is accounted as correct
+            weigths_of_ones: all marks are estimated according to their probabilty among experts
+            weights: all marks are estimated  according to their probabilty among other marks of each components and among experts
+            weigths_with_desicion: marks are estimated  according to their probabilty among other marks of each components and among experts
+                                    and the most expected is chosen
+            
+            
+        
+    Returns:
+        pd.DataFrame: dataframe with flags.
+    """
+    
+
+    
+    def all_ones(ann):
+        
+        columns=ann.columns
+        columns_of_states=columns[3:]
+        
+        ann_ones=ann.copy()
+        for i in range(len(columns_of_states)):
+            
+            col=columns_of_states[i]
+            ann_ones[col] = ann_ones[col].astype(int)
+            
+            
+        ann_ones_group=ann_ones.groupby(['ic_id']).sum()
+        ann_ones_ones=ann_ones_group.apply(lambda x: x>0, axis=1)
+        
+        for i in range(len(columns_of_states)):
+            
+            col=columns_of_states[i]
+            ann_ones_ones[col] = ann_ones_ones[col].astype(int)
+            
+        return  ann_ones_ones
+            
+    
+    def intercept_ones(ann):
+        columns=ann.columns
+        columns_of_states=columns[3:]
+        
+        
+        ann_ones=ann.copy()
+        for i in range(len(columns_of_states)):
+            
+            col=columns_of_states[i]
+            ann_ones[col] = ann_ones[col].astype(int)
+            
+        ann_ones_group=ann_ones.groupby(['ic_id']).sum()
+        #Здесь пока захардкожено 2
+        ann_ones_intercept=ann_ones_group.apply(lambda x: x==2, axis=1)
+        
+        for i in range(len(columns_of_states)):
+            
+            col=columns_of_states[i]
+            ann_ones_intercept[col] = ann_ones_intercept[col].astype(int)
+            
+        return  ann_ones_intercept
+    
+    
+    
+    def weigths_of_ones(ann):
+    
+        
+        columns=ann.columns
+        columns_of_states=columns[3:]
+        
+        
+        ann_ones=ann.copy()
+        for i in range(len(columns_of_states)):
+            
+            col=columns_of_states[i]
+            ann_ones[col] = ann_ones[col].astype(int)
+            
+        ann_ones_group=ann_ones.groupby(['ic_id']).sum()
+        #Здесь пока захардкожено 2
+        ann_weights_ones=ann_ones_group.apply(lambda x: x/sum(x), axis=1)
+        
+        return  ann_weights_ones    
+    
+    
+        
+    def weights(ann):
+        
+        columns=ann.columns
+        columns_of_states=columns[3:]    
+        
+        ann_probs=ann.apply(lambda x:  (x[3:]/sum(x[3:]) if sum(x[3:])!=0 else x[3:] ), axis=1)
+        ann_probs['ic_id']=ann['ic_id']
+        #ann_probs['user_hash']=ann['user_hash']
+        
+        ann_probs_group=ann_probs.groupby(['ic_id']).sum()
+        
+        ann_probs_probs=ann_probs_group.apply(lambda x: x/sum(x), axis=1)
+        
+        return ann_probs_probs
+    
+    
+    
+    def weigths_with_desicion(ann):
+        
+        columns=ann.columns
+        columns_of_states=columns[3:]    
+        
+        ann_probs=ann.apply(lambda x:  (x[3:]/sum(x[3:]) if sum(x[3:])!=0 else x[3:] ), axis=1)
+        ann_probs['ic_id']=ann['ic_id']
+        #ann_probs['user_hash']=ann['user_hash']
+        
+        ann_probs_group=ann_probs.groupby(['ic_id']).sum()
+        
+        ann_probs_probs=ann_probs_group.apply(lambda x: x/sum(x), axis=1)
+        ann_probs_probs_with_desicion=ann_probs_probs.apply(lambda x: x==max(x), axis=1)
+        
+        return ann_probs_probs_with_desicion   
+    
+    
+
+    if agg_type=='all_ones':
+        
+        df=all_ones(annotations)
+        
+    elif agg_type=='intercept_ones':
+        
+        df=intercept_ones(annotations)
+        
+    elif agg_type=='weigths_of_ones':
+        
+        df=weigths_of_ones(annotations)
+    
+    elif agg_type=='weights':
+        
+        df=weights(annotations)
+        
+    elif agg_type=='weigths_with_desicion':
+        
+        df=weigths_with_desicion(annotations)
+    
+    
+    
+    return df[flag]
+    
+    

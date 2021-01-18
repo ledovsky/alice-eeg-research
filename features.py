@@ -100,6 +100,73 @@ def compute_MIF(ic):
     return mean_psd[freqs > 20].sum() / mean_psd.sum()
 
 
+def compute_CORR_BL(ic):
+    """
+    Args:
+        ic (IC): indepentent component.
+
+    Returns:
+        float: Correaltion with eye blink examp;e
+    """
+    
+    def compute_cross_corr(epoch_eye, epoch):
+        ccov = np.correlate(epoch_eye - epoch_eye.mean(), epoch - epoch.mean(), mode='same')
+        ccor = ccov / (len(epoch_eye) * epoch_eye.std() * epoch.std())
+        
+        return ccor
+    
+    eye_blink_example=np.load('eye_blink_example.npy')
+    
+    ccors=[]
+    
+    for i in range(len(ic.signal)):
+        ic_ex_i=ic.signal.keys()[i]
+        epoch=ic.signal[ic_ex_i]
+        cc=compute_cross_corr(eye_blink_example,epoch)
+        
+        ccor_coef=sum(abs(cc)>0.65)/len(cc)
+        
+        ccors.append(ccor_coef)
+        
+    mean_of_epochs=np.mean(ccors)
+
+    return mean_of_epochs
+
+
+def compute_CORR_MOVE(ic):
+    """
+    Args:
+        ic (IC): indepentent component.
+
+    Returns:
+        float: Correaltion with eye movement example
+    """
+    
+    def compute_cross_corr(epoch_eye, epoch):
+        ccov = np.correlate(epoch_eye - epoch_eye.mean(), epoch - epoch.mean(), mode='same')
+        ccor = ccov / (len(epoch_eye) * epoch_eye.std() * epoch.std())
+        
+        return ccor
+    
+    eye_blink_example=np.load('eye_move_example.npy')
+    
+    ccors=[]
+    
+    for i in range(len(ic.signal)):
+        ic_ex_i=ic.signal.keys()[i]
+        epoch=ic.signal[ic_ex_i]
+        cc=compute_cross_corr(eye_blink_example,epoch)
+        
+        ccor_coef=sum(abs(cc)>0.65)/len(cc)
+        
+        ccors.append(ccor_coef)
+        
+    mean_of_epochs=np.mean(ccors)
+
+    return mean_of_epochs
+    
+    
+
 def compute_CIF(ic):
     # TODO Implement feature. Address low frequency resolution
     raise NotImplementedError
@@ -110,7 +177,9 @@ default_features = {'K': compute_K,
                     'SAD': compute_SAD,
                     'SVD': compute_SVD,
                     'SED': compute_SED,
-                    'MIF': compute_MIF}
+                    'MIF': compute_MIF,
+                    'CORR_BL': compute_CORR_BL,
+                    'CORR_MOVE': compute_CORR_MOVE}
 
 
 def build_feature_df(data, default=True, custom_features={}):
