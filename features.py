@@ -63,6 +63,57 @@ LE = {'f3', 'f5', 'f7', 'f9',
 RE = {'f4', 'f6', 'f8', 'f10',
       'af6'}
 
+FC = {'fp1','fpz','fp2','f3','fz','f4','fc3','fcz','fc4','c3','cz','c4'}
+FC_not={'f7','ft7','t3','tp7','t5','t6','tp8','t4','ft8','f8','cp3','cpz','cp4','p3','pz','p4','o1','oz','o2'}
+FP= {'c3','cz','c4','cp3','cpz','cp4','p3','pz','p4','o1','oz','o2'}
+FP_not={'f7','ft7','t3','tp7','t5','t6','tp8','t4','ft8','f8','fp1','fpz','fp2','f3','fz','f4','fc3','fcz','fc4'}
+
+
+def compute_AT(ic) -> float:
+    """
+    Args:
+        ic (IC): indepentent component.
+
+    Returns:
+        float: Alpha Topography - Difference between weights in frontal-central sites and other sites
+    """
+    return np.abs(ic.select_weights(FC).mean()) - np.abs(ic.select_weights(FC_not).mean())
+
+def compute_MT(ic) -> float:
+    """
+    Args:
+        ic (IC): indepentent component.
+
+    Returns:
+        float: Mu Topography - Difference between weights in occipital-parietal sites and other sites
+    """
+    return np.abs(ic.select_weights(FP).mean()) - np.abs(ic.select_weights(FP_not).mean())
+
+def compute_AMALB(ic)  -> float:
+    
+    """
+    Args:
+        ic (IC): indepentent component.
+
+    Returns:
+        float: Average Magnitude in ALpha Band
+    """
+
+
+    freqs, psd=ic.psd(verbose=False)
+    
+    alphs_inds=np.where((freqs>=6)&(freqs<=12))
+
+
+    alphs_inds_not=np.where((freqs<6)|(freqs>12))
+    
+    mean_psd = psd.mean(axis=0)
+    
+    return np.mean(mean_psd[alphs_inds])/np.mean(mean_psd[alphs_inds_not])
+    
+    
+
+
 
 def compute_SAD(ic) -> float:
     """
@@ -150,7 +201,10 @@ default_features = {'K': compute_K,
                     'SED': compute_SED,
                     'MIF': compute_MIF,
                     'CORR_BL': compute_CORR_BL,
-                    'CORR_MOVE': compute_CORR_MOVE}
+                    'CORR_MOVE': compute_CORR_MOVE,
+                    'AT':compute_AT,
+                    'MT':compute_MT,
+                    'AMALB':compute_AMALB}
 
 
 def build_feature_df(data, default=True, custom_features={}):

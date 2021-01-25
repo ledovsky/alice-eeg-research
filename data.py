@@ -120,7 +120,7 @@ def get_flag_names(annotations) -> list:
     return annotations.columns[annotations.columns.str.startswith('flag_')]
 
 
-def build_target_df(annotations, flags=None, threshold=0.5) -> pd.DataFrame:
+def build_target_df(annotations, flags=None, threshold=0.5,agg_type='all_ones') -> pd.DataFrame:
     """
     Args:
         annotations (pd.DataFrame): dataframe containing targets.
@@ -139,14 +139,14 @@ def build_target_df(annotations, flags=None, threshold=0.5) -> pd.DataFrame:
         flags = dict.fromkeys(flags, threshold)
 
     for flag, threshold in flags.items():
-        targets[flag] = get_target(annotations, flag, threshold)
+        targets[flag] = get_target_temp(annotations, flag, threshold, agg_type)
 
     return targets
 
 
 
 
-def get_target_temp(annotations, flag, agg_type='all_ones') -> pd.DataFrame:
+def get_target_temp(annotations, flag, threshold=0.5, agg_type='all_ones') -> pd.DataFrame:
     
     """
     Args:
