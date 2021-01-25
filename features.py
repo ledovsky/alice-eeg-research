@@ -2,6 +2,16 @@ import numpy as np
 
 from utils import *
 
+eye_move_example = np.load('eye_move_example.npy')
+eye_blink_example = np.load('eye_blink_example.npy')
+
+
+def _cross_corr(epoch_eye, epoch):
+    ccov = np.correlate(epoch_eye - epoch_eye.mean(), epoch - epoch.mean(), mode='same')
+    ccor = ccov / (len(epoch_eye) * epoch_eye.std() * epoch.std())
+
+    return ccor
+
 
 def compute_K(ic, mean_shift=False, thres=0.99) -> float:
     """
@@ -100,40 +110,21 @@ def compute_MIF(ic):
     return mean_psd[freqs > 20].sum() / mean_psd.sum()
 
 
-def compute_CORR_BL(ic):
+def compute_CORR_BL(ic, thres=0.65):
     """
     Args:
         ic (IC): indepentent component.
 
     Returns:
-        float: Correaltion with eye blink examp;e
+        float: Correaltion with eye blink example
     """
-    
-    def compute_cross_corr(epoch_eye, epoch):
-        ccov = np.correlate(epoch_eye - epoch_eye.mean(), epoch - epoch.mean(), mode='same')
-        ccor = ccov / (len(epoch_eye) * epoch_eye.std() * epoch.std())
-        
-        return ccor
-    
-    eye_blink_example=np.load('eye_blink_example.npy')
-    
-    ccors=[]
-    
-    for i in range(len(ic.signal)):
-        ic_ex_i=ic.signal.keys()[i]
-        epoch=ic.signal[ic_ex_i]
-        cc=compute_cross_corr(eye_blink_example,epoch)
-        
-        ccor_coef=sum(abs(cc)>0.65)/len(cc)
-        
-        ccors.append(ccor_coef)
-        
-    mean_of_epochs=np.mean(ccors)
+    in_epoch_corrs = [_cross_corr(eye_blink_example, epoch) for epoch in ic.signal.values]
+    pattern_probs = [np.mean(abs(epoch_corr) > thres) for epoch_corr in in_epoch_corrs]
 
-    return mean_of_epochs
+    return np.mean(pattern_probs)
 
 
-def compute_CORR_MOVE(ic):
+def compute_CORR_MOVE(ic, thres=0.65):
     """
     Args:
         ic (IC): indepentent component.
@@ -141,31 +132,11 @@ def compute_CORR_MOVE(ic):
     Returns:
         float: Correaltion with eye movement example
     """
-    
-    def compute_cross_corr(epoch_eye, epoch):
-        ccov = np.correlate(epoch_eye - epoch_eye.mean(), epoch - epoch.mean(), mode='same')
-        ccor = ccov / (len(epoch_eye) * epoch_eye.std() * epoch.std())
-        
-        return ccor
-    
-    eye_blink_example=np.load('eye_move_example.npy')
-    
-    ccors=[]
-    
-    for i in range(len(ic.signal)):
-        ic_ex_i=ic.signal.keys()[i]
-        epoch=ic.signal[ic_ex_i]
-        cc=compute_cross_corr(eye_blink_example,epoch)
-        
-        ccor_coef=sum(abs(cc)>0.65)/len(cc)
-        
-        ccors.append(ccor_coef)
-        
-    mean_of_epochs=np.mean(ccors)
+    in_epoch_corrs = [_cross_corr(eye_move_example, epoch) for epoch in ic.signal.values]
+    pattern_probs = [np.mean(abs(epoch_corr) > thres) for epoch_corr in in_epoch_corrs]
 
-    return mean_of_epochs
-    
-    
+    return np.mean(pattern_probs)
+
 
 def compute_CIF(ic):
     # TODO Implement feature. Address low frequency resolution
