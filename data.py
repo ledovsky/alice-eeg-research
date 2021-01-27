@@ -169,9 +169,8 @@ def build_target_df(annotations, flags=None, strategy='majority', weights='equal
 
     return targets
 
-
 # Legacy
-def get_target_temp(annotations, flag, agg_type='all_ones') -> pd.DataFrame:
+def get_target_temp(annotations, flag, threshold=0.5, agg_type='all_ones') -> pd.DataFrame:
     
     """
     Args:
