@@ -93,7 +93,6 @@ def read_ic(dir, ic_id, freqs=None):
     return IC(signal, weights, freqs.loc[freqs['ic_id'] == ic_id, 'sfreq'])
 
 
-
 def load_dataset(dir='data'):
     path = Path(dir)
     freqs = pd.read_csv(path/'ics.csv')
@@ -103,49 +102,75 @@ def load_dataset(dir='data'):
     return data, annotations
 
 
-def get_target(annotations, flag, threshold=0.5) -> pd.Series:
-    """
-    Args:
-        annotations (pd.DataFrame): dataframe containing targets. IC column must be named 'ic_id'.
-        flag (str): flag name
-        threshold (float, optional): if the average label of a component is above this value, the flag is set True. Defaults to 0.5.
-
-    Returns:
-        pd.Series: flags for each component.
-    """
-    return annotations.groupby('ic_id')[flag].mean() > threshold
-
-
 def get_flag_names(annotations) -> list:
-    return annotations.columns[annotations.columns.str.startswith('flag_')]
+    return list(annotations.columns[annotations.columns.str.startswith('flag_')])
 
 
-def build_target_df(annotations, flags=None, threshold=0.5) -> pd.DataFrame:
+def build_target_values(annotations, weights='equal'):
+    assert weights in {'equal', 'uniform'}, 'Unknown weight type.'
+
+    values = annotations[get_flag_names(annotations)].astype(float)
+
+    if weights == 'uniform':
+        values = values.div(values.sum(axis=1), axis='index')
+    return pd.concat([annotations['ic_id'], values], axis=1)
+
+
+def build_target_df(annotations, flags=None, strategy='majority', weights='equal', threshold=None) -> pd.DataFrame:
     """
     Args:
-        annotations (pd.DataFrame): dataframe containing targets.
-        flags (dict, list, optional): either list of flag names for which to construct labels or a mapping {flag_name: threshold}. Then it will select each component with its own threshold value.
-        If set to None, all flags in annotaions will be selected.
-        threshold (float, optional): if the average label of a component is above this value, the flag is set True. Defaults to 0.5.
+
+    annotations (pd.DataFrame):
+        Dataframe containing targets.
+
+    flags (list, optional):
+        The list of flags for which to generate target. If set to None, all flags in annotaions will be selected.
+
+    strategy (str, optional):
+        The type of target value aggregation.
+        There binary and non-binary strategies.
+        Binary strategies are 'majority', 'any', 'all'.
+        Non-binary strategies are 'mean', 'max', 'min'.
+        Default strategy is 'majority'.
+
+    weights (str, optional):
+        The type of weight aggregation.
+        When set to 'equal' all psoitive labels will have weight 1.
+        When set to 'uniform' all psoitive labels will have weight  1 / n,
+        where n is the number of positive labels assigned to this ic by this expert.
+        Defaults to 'equal'.
+
+    threshold (list or float, optional):
+        Either the universal threshold value or a list of threshold values for each flag in `flags`.
+        If provided, the output will be binary. Requires non-binary strategy.
+        Defaults to None.
 
     Returns:
-        pd.DataFrame: dataframe with flags.
+
+        pd.DataFrame: dataframe containing targets.
     """
-    targets = pd.DataFrame()
+    assert strategy in {'min', 'max', 'mean', 'all', 'any', 'majority'}, 'Unknown strategy.'
 
     if flags is None:
         flags = get_flag_names(annotations)
-    if not isinstance(flags, dict):
-        flags = dict.fromkeys(flags, threshold)
 
-    for flag, threshold in flags.items():
-        targets[flag] = get_target(annotations, flag, threshold)
+    target_values = build_target_values(annotations, weights)
+    target_groups = target_values.groupby('ic_id')[flags]
+
+    if strategy == 'majority':
+        targets = target_groups.mean()
+        return targets >= 0.5
+
+    targets = getattr(target_groups, strategy)()
+
+    if threshold is not None:
+        assert strategy in {'min', 'max', 'mean'}, 'When provided threshold use non-binary strategy.'
+        return targets >= threshold
 
     return targets
 
 
-
-
+# Legacy
 def get_target_temp(annotations, flag, agg_type='all_ones') -> pd.DataFrame:
     
     """
