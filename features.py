@@ -79,6 +79,7 @@ def compute_AT(ic) -> float:
     """
     return np.abs(ic.select_weights(FC).mean()) - np.abs(ic.select_weights(FC_not).mean())
 
+
 def compute_MT(ic) -> float:
     """
     Args:
@@ -89,8 +90,8 @@ def compute_MT(ic) -> float:
     """
     return np.abs(ic.select_weights(FP).mean()) - np.abs(ic.select_weights(FP_not).mean())
 
+
 def compute_AMALB(ic)  -> float:
-    
     """
     Args:
         ic (IC): indepentent component.
@@ -99,19 +100,11 @@ def compute_AMALB(ic)  -> float:
         float: Average Magnitude in ALpha Band
     """
 
-
-    freqs, psd=ic.psd(verbose=False)
-    
-    alphs_inds=np.where((freqs>=6)&(freqs<=12))
-
-
-    alphs_inds_not=np.where((freqs<6)|(freqs>12))
-    
+    freqs, psd = ic.psd(verbose=False)
+    alpha_inds = (freqs >= 6) & (freqs <= 12)
     mean_psd = psd.mean(axis=0)
-    
-    return np.mean(mean_psd[alphs_inds])/np.mean(mean_psd[alphs_inds_not])
-    
-    
+
+    return mean_psd[alpha_inds].mean() / mean_psd[~alpha_inds].mean()
 
 
 
@@ -188,10 +181,6 @@ def compute_CORR_MOVE(ic, thres=0.65):
 
     return np.mean(pattern_probs)
 
-
-def compute_CIF(ic):
-    # TODO Implement feature. Address low frequency resolution
-    raise NotImplementedError
 
 
 default_features = {'K': compute_K,
