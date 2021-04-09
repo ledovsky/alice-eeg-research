@@ -1,3 +1,7 @@
 __pycache__
 dataset_Kids
 Articles
+trained_models
+output
+.vscode
+.ipynb_checkpoints
